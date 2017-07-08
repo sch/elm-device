@@ -2,6 +2,8 @@ effect module Orientation
     where { subscription = MySub }
     exposing
         ( Orientation
+        , EulerRotation
+        , default
         , changes
         )
 
@@ -9,74 +11,78 @@ effect module Orientation
 device supports
 the [experimental device orientation
 apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html).
+
+@docs Orientation, EulerRotation, default, changes
 -}
 
 import Dict
 import Dom.LowLevel as Dom
 import Json.Decode as Json
 import Process
-import Quaternion exposing (Quat)
+-- import Quaternion exposing (Quat)
 import Task exposing (Task)
 
 
--- POSITIONS
+-- ORIENTATION
 
 
-{-| The position of the mouse relative to the whole document. So if you are
-scrolled down a bunch, you are still getting a coordinate relative to the
-very top left corner of the *whole* document.
+type alias Orientation = EulerRotation
+
+type alias Degrees = Float
+
+{-| The "euler rotation" of the device, which is just a fancy way of describing
+three angles that provide enough information to pinpoint the direction a device
+is tilting.
+
+- **absolute** is whether the frame of reference is the earth or something
+  arbitrary.
+
+- **alpha** is the angle of rotation of the device about the screen. So for
+  example when you rotate the device on its side in order to watch a video,
+  that's a rotation about the alpha axis. This value will be a float between
+  0 and 360 degrees.
+
+- **beta** is the angle of rotation of the device about horizontal axis.
+  So if you've had your phone held flat and you panned it up to take a picture,
+  that would be a change in rotation as beta.
+
+- **gamma** is the angle of rotation of the device about vertical axis.
+  So if your device had a camera on the back and you were rotating it while
+  taking a panoramic picture, that would be a change in gamma rotation.
+
+These are fairly low-level primitives to have! Wrapping them in Elm makes for
+a bit of a tricky situation.
 -}
-type alias Position =
-    { x : Int
-    , y : Int
+
+type alias EulerRotation =
+    { absolute : Bool
+    , alpha : Degrees
+    , beta : Degrees
+    , gamma : Degrees
     }
 
-
-type alias Orientation =
-    Quaternion
-
-
-{-| The decoder used to extract a `Position` from a JavaScript mouse event.
+{-| The decoder used to extract orientation fields from a deviceorientation event.
 -}
-position : Json.Decoder Position
-position =
-    Json.map2 Position
-        (Json.field "pageX" Json.int)
-        (Json.field "pageY" Json.int)
+eulerRotation : Json.Decoder Orientation
+eulerRotation =
+    Json.map4 EulerRotation
+        (Json.field "absolute" Json.bool)
+        (Json.field "alpha" Json.float)
+        (Json.field "beta" Json.float)
+        (Json.field "gamma" Json.float)
 
 
-
--- MOUSE EVENTS
-
-
-{-| Subscribe to mouse clicks anywhere on screen.
+{-| This is a default orientation, useful for representing initial orientation state
 -}
-clicks : (Position -> msg) -> Sub msg
-clicks tagger =
-    subscription (MySub "click" tagger)
+default : EulerRotation
+default = EulerRotation False 0 0 0
 
 
-{-| Subscribe to mouse moves anywhere on screen. It is best to unsubscribe if
-you do not need these events. Otherwise you will handle a bunch of events for
-no benefit.
+{-| Subscribe to changes in orientation for a device.
 -}
-moves : (Position -> msg) -> Sub msg
-moves tagger =
-    subscription (MySub "mousemove" tagger)
-
-
-{-| Get a position whenever the user *presses* the mouse button.
--}
-downs : (Position -> msg) -> Sub msg
-downs tagger =
-    subscription (MySub "mousedown" tagger)
-
-
-{-| Get a position whenever the user *releases* the mouse button.
--}
-ups : (Position -> msg) -> Sub msg
-ups tagger =
-    subscription (MySub "mouseup" tagger)
+changes : (Orientation -> msg) -> Sub msg
+changes tagger =
+    subscription (MySub "deviceorientation" tagger)
 
 
 
@@ -84,7 +90,7 @@ ups tagger =
 
 
 type MySub msg
-    = MySub String (Position -> msg)
+    = MySub String (Orientation -> msg)
 
 
 subMap : (a -> b) -> MySub a -> MySub b
@@ -101,7 +107,7 @@ type alias State msg =
 
 
 type alias Watcher msg =
-    { taggers : List (Position -> msg)
+    { taggers : List (Orientation -> msg)
     , pid : Process.Id
     }
 
@@ -111,7 +117,7 @@ type alias Watcher msg =
 
 
 type alias SubDict msg =
-    Dict.Dict String (List (Position -> msg))
+    Dict.Dict String (List (Orientation -> msg))
 
 
 categorize : List (MySub msg) -> SubDict msg
@@ -151,7 +157,7 @@ init =
 
 type alias Msg =
     { category : String
-    , position : Position
+    , orientation : Orientation
     }
 
 
@@ -172,7 +178,7 @@ onEffects router newSubs oldState =
         rightStep category taggers task =
             let
                 tracker =
-                    Dom.onDocument category position (Platform.sendToSelf router << Msg category)
+                    Dom.onDocument category eulerRotation (Platform.sendToSelf router << Msg category)
             in
                 task
                     |> Task.andThen
@@ -191,7 +197,7 @@ onEffects router newSubs oldState =
 
 
 onSelfMsg : Platform.Router msg Msg -> Msg -> State msg -> Task Never (State msg)
-onSelfMsg router { category, position } state =
+onSelfMsg router { category, orientation } state =
     case Dict.get category state of
         Nothing ->
             Task.succeed state
@@ -199,7 +205,7 @@ onSelfMsg router { category, position } state =
         Just { taggers } ->
             let
                 send tagger =
-                    Platform.sendToApp router (tagger position)
+                    Platform.sendToApp router (tagger orientation)
             in
                 Task.sequence (List.map send taggers)
                     &> Task.succeed state
