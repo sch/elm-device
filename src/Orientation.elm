@@ -13,53 +13,65 @@ the [experimental device orientation
 apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html).
 
 @docs Orientation, EulerRotation, default, changes
+
 -}
 
 import Dict
 import Dom.LowLevel as Dom
 import Json.Decode as Json
 import Process
+
+
 -- import Quaternion exposing (Quat)
+
 import Task exposing (Task)
 
 
 -- ORIENTATION
 
 
-type alias Orientation = EulerRotation
+{-| The orientation of the device. Perhaps this will be a quaternion, right now
+it's just going to be an alias for EulerRotation
+-}
+type alias Orientation =
+    EulerRotation
 
-type alias Degrees = Float
+
+type alias Degrees =
+    Float
+
 
 {-| The "euler rotation" of the device, which is just a fancy way of describing
 three angles that provide enough information to pinpoint the direction a device
 is tilting.
 
-- **absolute** is whether the frame of reference is the earth or something
-  arbitrary.
+  - **absolute** is whether the frame of reference is the earth or something
+    arbitrary.
 
-- **alpha** is the angle of rotation of the device about the screen. So for
-  example when you rotate the device on its side in order to watch a video,
-  that's a rotation about the alpha axis. This value will be a float between
-  0 and 360 degrees.
+  - **alpha** is the angle of rotation of the device about the screen. So for
+    example when you rotate the device on its side in order to watch a video,
+    that's a rotation about the alpha axis. This value will be a float between
+    0 and 360 degrees.
 
-- **beta** is the angle of rotation of the device about horizontal axis.
-  So if you've had your phone held flat and you panned it up to take a picture,
-  that would be a change in rotation as beta.
+  - **beta** is the angle of rotation of the device about horizontal axis.
+    So if you've had your phone held flat and you panned it up to take a picture,
+    that would be a change in rotation as beta.
 
-- **gamma** is the angle of rotation of the device about vertical axis.
-  So if your device had a camera on the back and you were rotating it while
-  taking a panoramic picture, that would be a change in gamma rotation.
+  - **gamma** is the angle of rotation of the device about vertical axis.
+    So if your device had a camera on the back and you were rotating it while
+    taking a panoramic picture, that would be a change in gamma rotation.
 
 These are fairly low-level primitives to have! Wrapping them in Elm makes for
 a bit of a tricky situation.
--}
 
+-}
 type alias EulerRotation =
     { absolute : Bool
     , alpha : Degrees
     , beta : Degrees
     , gamma : Degrees
     }
+
 
 {-| The decoder used to extract orientation fields from a deviceorientation event.
 -}
@@ -75,14 +87,19 @@ eulerRotation =
 {-| This is a default orientation, useful for representing initial orientation state
 -}
 default : EulerRotation
-default = EulerRotation False 0 0 0
+default =
+    { absolute = False
+    , alpha = 0
+    , beta = 0
+    , gamma = 0
+    }
 
 
 {-| Subscribe to changes in orientation for a device.
 -}
 changes : (Orientation -> msg) -> Sub msg
 changes tagger =
-    subscription (MySub "deviceorientation" tagger)
+    subscription (MySub tagger)
 
 
 
@@ -90,122 +107,62 @@ changes tagger =
 
 
 type MySub msg
-    = MySub String (Orientation -> msg)
+    = MySub (Orientation -> msg)
 
 
 subMap : (a -> b) -> MySub a -> MySub b
-subMap func (MySub category tagger) =
-    MySub category (tagger >> func)
-
-
-
--- EFFECT MANAGER STATE
-
-
-type alias State msg =
-    Dict.Dict String (Watcher msg)
-
-
-type alias Watcher msg =
-    { taggers : List (Orientation -> msg)
-    , pid : Process.Id
-    }
-
-
-
--- CATEGORIZE SUBSCRIPTIONS
-
-
-type alias SubDict msg =
-    Dict.Dict String (List (Orientation -> msg))
-
-
-categorize : List (MySub msg) -> SubDict msg
-categorize subs =
-    categorizeHelp subs Dict.empty
-
-
-categorizeHelp : List (MySub msg) -> SubDict msg -> SubDict msg
-categorizeHelp subs subDict =
-    case subs of
-        [] ->
-            subDict
-
-        (MySub category tagger) :: rest ->
-            categorizeHelp rest <|
-                Dict.update category (categorizeHelpHelp tagger) subDict
-
-
-categorizeHelpHelp : a -> Maybe (List a) -> Maybe (List a)
-categorizeHelpHelp value maybeValues =
-    case maybeValues of
-        Nothing ->
-            Just [ value ]
-
-        Just values ->
-            Just (value :: values)
+subMap func (MySub tagger) =
+    MySub (tagger >> func)
 
 
 
 -- EFFECT MANAGER
 
 
+type alias State msg =
+    Maybe
+        { subs : List (MySub msg)
+        , pid : Process.Id
+        }
+
+
 init : Task Never (State msg)
 init =
-    Task.succeed Dict.empty
+    Task.succeed Nothing
 
 
-type alias Msg =
-    { category : String
-    , orientation : Orientation
-    }
+(&>) task1 task2 =
+    Task.andThen (\_ -> task2) task1
 
 
-(&>) t1 t2 =
-    Task.andThen (\_ -> t2) t1
-
-
-onEffects : Platform.Router msg Msg -> List (MySub msg) -> State msg -> Task Never (State msg)
+onEffects : Platform.Router msg Orientation -> List (MySub msg) -> State msg -> Task Never (State msg)
 onEffects router newSubs oldState =
-    let
-        leftStep category { pid } task =
-            Process.kill pid &> task
+    case ( oldState, newSubs ) of
+        ( Nothing, [] ) ->
+            Task.succeed Nothing
 
-        bothStep category { pid } taggers task =
-            task
-                |> Task.andThen (\state -> Task.succeed (Dict.insert category (Watcher taggers pid) state))
+        ( Just { pid }, [] ) ->
+            Process.kill pid
+                &> Task.succeed Nothing
 
-        rightStep category taggers task =
-            let
-                tracker =
-                    Dom.onDocument category eulerRotation (Platform.sendToSelf router << Msg category)
-            in
-                task
-                    |> Task.andThen
-                        (\state ->
-                            Process.spawn tracker
-                                |> Task.andThen (\pid -> Task.succeed (Dict.insert category (Watcher taggers pid) state))
-                        )
-    in
-        Dict.merge
-            leftStep
-            bothStep
-            rightStep
-            oldState
-            (categorize newSubs)
-            (Task.succeed Dict.empty)
+        ( Nothing, _ ) ->
+            Process.spawn (Dom.onWindow "deviceorientation" eulerRotation (Task.succeed ()))
+                |> Task.andThen (\pid -> Task.succeed (Just { subs = newSubs, pid = pid }))
+
+        ( Just { pid }, _ ) ->
+            Task.succeed (Just { subs = newSubs, pid = pid })
 
 
-onSelfMsg : Platform.Router msg Msg -> Msg -> State msg -> Task Never (State msg)
-onSelfMsg router { category, orientation } state =
-    case Dict.get category state of
+onSelfMsg : Platform.Router msg Orientation -> Orientation -> State msg -> Task Never (State msg)
+onSelfMsg router dimensions state =
+    case state of
         Nothing ->
             Task.succeed state
 
-        Just { taggers } ->
+        Just { subs } ->
             let
-                send tagger =
-                    Platform.sendToApp router (tagger orientation)
+                send (MySub tagger) =
+                    Platform.sendToApp router (tagger dimensions)
             in
-                Task.sequence (List.map send taggers)
+                Task.sequence (List.map send subs)
                     &> Task.succeed state
