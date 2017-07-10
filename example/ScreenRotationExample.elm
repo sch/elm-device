@@ -2,7 +2,7 @@ module ScreenRotationExample exposing (main)
 
 import Html exposing (Html)
 import Html.Attributes exposing (style)
-import Orientation exposing (EulerRotation)
+import Device.Orientation exposing (EulerRotation)
 
 
 main =
