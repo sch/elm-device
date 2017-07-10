@@ -6,9 +6,8 @@ effect module Device.Orientation
         , changes
         )
 
-{-| This library lets you listen to the orientation of the device, if the
-device supports
-the [experimental device orientation
+{-| This library lets you listen to the rotational orientation of the device,
+so long as it supports the [experimental device orientation
 apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html).
 
 @docs EulerRotation, initial, changes
@@ -19,11 +18,7 @@ import Dict
 import Dom.LowLevel as Dom
 import Json.Decode as Json
 import Process
-
-
--- import Quaternion exposing (Quat)
-
-import Task exposing (Task, andThen)
+import Task exposing (Task)
 
 
 -- ORIENTATION
@@ -38,17 +33,20 @@ three angles that provide enough information to pinpoint the direction a device
 is tilting.
 
   - **alpha** is the angle of rotation of the device about the screen. So for
-    example when you rotate the device on its side in order to watch a video,
-    that's a rotation about the alpha axis. This value will be a float between
-    0 and 360 degrees.
+    example, if you're looking at your phone on a table, and you spin it around
+    like a game of spin-the-bottle, the alpha example points in the direction of
+    the person you must kiss. This value will be a float between 0 and 360
+    degrees.
 
   - **beta** is the angle of rotation of the device about horizontal axis.
     So if you've had your phone held flat and you panned it up to take a picture,
-    that would be a change in rotation as beta.
+    that would be a change in rotation as beta. This value is a float between
+    -180 and 180 degrees.
 
   - **gamma** is the angle of rotation of the device about vertical axis.
     So if your device had a camera on the back and you were rotating it while
-    taking a panoramic picture, that would be a change in gamma rotation.
+    taking a panoramic picture, that would be a change in gamma rotation. This
+    value is a float between -90 and 90 degrees.
 
 These are fairly low-level primitives to have! The use of EulerRotations can be
 convenient, as they report useful values about the rotation about the screen
@@ -62,8 +60,8 @@ type alias EulerRotation =
     }
 
 
-{-| This is a default orientation, useful for representing initial orientation
-state
+{-| This is the starting orientation, useful for representing initial orientation
+state in a model.
 -}
 initial : EulerRotation
 initial =
@@ -108,8 +106,9 @@ subMap func (MySub tagger) =
 
 
 {-| Our state here is the state of the part of this module that keeps track of
-what's attached to what. Another way of thinking of the init function is like
-having a mutable
+what's attached to what. There may be an event listener registered and some
+number of subscriptions interested in that event, or there may be nothing at
+all.
 -}
 type alias State msg =
     Maybe
