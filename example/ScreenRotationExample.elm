@@ -24,7 +24,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Orientation.initial, Cmd.none )
+    ( Device.Orientation.initial, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -36,7 +36,7 @@ update msg model =
 
 subscriptions : EulerRotation -> Sub Msg
 subscriptions _ =
-    Orientation.changes Reorient
+    Device.Orientation.changes Reorient
 
 
 view : Model -> Html Msg

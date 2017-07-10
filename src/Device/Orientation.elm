@@ -1,4 +1,4 @@
-effect module Orientation
+effect module Device.Orientation
     where { subscription = MySub }
     exposing
         ( EulerRotation

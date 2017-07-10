@@ -1,13 +1,13 @@
 {
     "version": "1.0.0",
     "summary": "Subscribe to changes of your device's orientation (tilt, pan, roll)",
-    "repository": "https://github.com/sch/elm-orientation.git",
+    "repository": "https://github.com/sch/elm-device.git",
     "license": "BSD3",
     "source-directories": [
         "src"
     ],
     "exposed-modules": [
-        "Orientation"
+        "Device.Orientation"
     ],
     "dependencies": {
         "elm-lang/core": "5.1.1 <= v < 6.0.0",
