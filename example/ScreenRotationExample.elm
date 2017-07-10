@@ -43,16 +43,16 @@ view : Model -> Html Msg
 view model =
     let
         screenRotation =
-            toString (floor model.alpha) ++ " deg"
+            toString (floor model.alpha) ++ "°"
 
         rotateZ =
             "rotateZ(" ++ toString model.alpha ++ "deg)"
 
         rotateX =
-            "rotateX(" ++ toString ((clamp -90 90 model.beta) / 9) ++ "deg)"
+            "rotateX(" ++ toString ((clamp -90 90 model.beta) / 3) ++ "deg)"
 
         rotateY =
-            "rotateY(" ++ toString (model.gamma / 9) ++ "deg)"
+            "rotateY(" ++ toString (negate model.gamma / 3) ++ "deg)"
 
         styles =
             [ ( "padding", "0.618em" )
@@ -60,10 +60,12 @@ view model =
             , ( "font-size", "200%" )
             , ( "font-weight", "500" )
             , ( "color", "white" )
-            , ( "transform", "perspective(1000px) " ++ rotateX ++ " " ++ rotateY ++ " " ++ rotateZ )
+            , ( "transform", "perspective(500px) " ++ rotateX ++ " " ++ rotateY ++ " " ++ rotateZ )
             , ( "background-color", "rgba(255, 255, 255, 0.1)" )
             , ( "box-shadow", "0 1px 3px rgba(1, 1, 1, 0.1)" )
             , ( "border-radius", "3px" )
+            , ( "min-width", "2.2em" )
+            , ( "text-align", "right" )
             ]
     in
         Html.div [ style styles ] [ Html.text screenRotation ] |> center
