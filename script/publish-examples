@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# script/publish-examples: Build examples and upload to github pages
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+elm-make example/ScreenRotationExample.elm --output build/index.html
+
+TEMPORARY_DIRECTORY=`mktemp -d`
+cp -r build/. $TEMPORARY_DIRECTORY
+cd $TEMPORARY_DIRECTORY
+
+git init
+git add .
+git commit -m "Rebuilt examples website"
+git remote add origin git@github.com:sch/elm-device.git
+git push origin HEAD:gh-pages --force
