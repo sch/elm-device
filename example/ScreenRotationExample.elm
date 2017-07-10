@@ -1,8 +1,8 @@
-module OceanExample exposing (main)
+module ScreenRotationExample exposing (main)
 
 import Html exposing (Html)
 import Html.Attributes exposing (style)
-import Orientation exposing (Orientation, EulerRotation)
+import Orientation exposing (EulerRotation)
 
 
 main =
@@ -15,7 +15,7 @@ main =
 
 
 type Msg
-    = Reorient Orientation
+    = Reorient EulerRotation
 
 
 type alias Model =
@@ -24,7 +24,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( Orientation.default, Cmd.none )
+    ( Orientation.initial, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -34,23 +34,27 @@ update msg model =
             ( angles, Cmd.none )
 
 
-subscriptions : Orientation -> Sub Msg
-subscriptions model =
-    Orientation.changes (\thing -> Reorient thing)
+subscriptions : EulerRotation -> Sub Msg
+subscriptions _ =
+    Orientation.changes Reorient
 
 
 view : Model -> Html Msg
 view model =
     let
-        rotation =
-            toString model.alpha ++ " deg"
+        screenRotation =
+            toString (floor model.alpha) ++ " deg"
 
         styles =
             [ ( "padding", "2em" )
             , ( "font-family", "-apple-system, BlinkMacSystemFont, sans-serif" )
+            , ( "font-size", "300%" )
+            , ( "font-weight", "500" )
+            , ( "color", "white" )
+            , ( "transform", "rotate(" ++ toString model.alpha ++ "deg)" )
             ]
     in
-        Html.div [ style styles ] [ Html.text rotation ] |> center
+        Html.div [ style styles ] [ Html.text screenRotation ] |> center
 
 
 center : Html Msg -> Html Msg
@@ -65,6 +69,7 @@ center node =
             , ( "display", "flex" )
             , ( "align-items", "center" )
             , ( "justify-content", "center" )
+            , ( "background-color", "#60B5CC" )
             ]
     in
         Html.div [ style styles ] [ node ]
