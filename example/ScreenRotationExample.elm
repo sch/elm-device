@@ -45,13 +45,25 @@ view model =
         screenRotation =
             toString (floor model.alpha) ++ " deg"
 
+        rotateZ =
+            "rotateZ(" ++ toString model.alpha ++ "deg)"
+
+        rotateX =
+            "rotateX(" ++ toString ((clamp -90 90 model.beta) / 9) ++ "deg)"
+
+        rotateY =
+            "rotateY(" ++ toString (model.gamma / 9) ++ "deg)"
+
         styles =
-            [ ( "padding", "2em" )
+            [ ( "padding", "0.618em" )
             , ( "font-family", "-apple-system, BlinkMacSystemFont, sans-serif" )
-            , ( "font-size", "300%" )
+            , ( "font-size", "200%" )
             , ( "font-weight", "500" )
             , ( "color", "white" )
-            , ( "transform", "rotate(" ++ toString model.alpha ++ "deg)" )
+            , ( "transform", "perspective(1000px) " ++ rotateX ++ " " ++ rotateY ++ " " ++ rotateZ )
+            , ( "background-color", "rgba(255, 255, 255, 0.1)" )
+            , ( "box-shadow", "0 1px 3px rgba(1, 1, 1, 0.1)" )
+            , ( "border-radius", "3px" )
             ]
     in
         Html.div [ style styles ] [ Html.text screenRotation ] |> center
