@@ -20,28 +20,36 @@ type Msg
 
 
 type alias Model =
-    Motion
+    List Motion
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Device.Motion.initial, Cmd.none )
+    ( List.singleton Device.Motion.initial, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Move angles ->
-            ( angles, Cmd.none )
+        Move motion ->
+            ( updateMotion model motion, Cmd.none )
 
+updateMotion : List Motion -> Motion -> List Motion
+updateMotion history motion =
+    motion :: (List.take 10 history)
 
-subscriptions : Motion -> Sub Msg
+subscriptions : Model -> Sub Msg
 subscriptions _ =
     Device.Motion.changes Move
 
 
 view : Model -> Html Msg
 view model =
+    case model of
+        [] -> Html.div [ ] [ Html.text "hi" ]
+        latest :: _  -> tileView latest
+
+tileView latest =
     let
         styles =
             [ ( "padding", "0.618em" )
@@ -53,26 +61,24 @@ view model =
             , ( "min-width", "2.2em" )
             , ( "text-align", "right" )
             ]
+
     in
         center <|
             Html.div
                 [ style styles ]
-                [ accelerationView "acceleration" model.acceleration
-                , accelerationView "including gravity" model.accelerationIncludingGravity
-                , rotationView "angular velocity" model.rotationRate
+                [ accelerationView "acceleration" latest.acceleration
+                , accelerationView "including gravity" latest.accelerationIncludingGravity
+                , rotationView "angular velocity" latest.rotationRate
                 ]
 
-
 accelerationView title acceleration =
-    Html.div [ style [ ( "margin-bottom", "1em" ) ] ]
-        [ Html.div [ style [ ( "text-align", "center" ) ] ] [ Html.text title ]
-        , Html.div []
-            [ accelerationPartView "x" acceleration.x
-            , accelerationPartView "y" acceleration.y
-            , accelerationPartView "z" acceleration.z
-            ]
-        ]
-
+        Html.div [ style [ ( "margin-bottom", "1em" ) ] ]
+            [ Html.div [ style [ ( "text-align", "center" ) ] ] [ Html.text title ]
+            , Html.div []
+                [ accelerationPartView "x" acceleration.x
+                , accelerationPartView "y" acceleration.y
+                , accelerationPartView "z" acceleration.z
+                ] ]
 
 rotationView title velocity =
     Html.div []
