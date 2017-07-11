@@ -2,6 +2,7 @@ effect module Device.Orientation
     where { subscription = MySub }
     exposing
         ( EulerRotation
+        , eulerRotation
         , initial
         , changes
         )
@@ -10,7 +11,7 @@ effect module Device.Orientation
 so long as it supports the [experimental device orientation
 apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html).
 
-@docs EulerRotation, initial, changes
+@docs EulerRotation, eulerRotation, initial, changes
 
 -}
 
