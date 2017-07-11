@@ -4,13 +4,14 @@ import Html exposing (Html)
 import Html.Attributes exposing (style)
 import Time
 import Device.Motion exposing (Motion)
+import Plot
 
 
 main =
     Html.program
         { init = init
         , update = update
-        , view = view
+        , view = plotMotion
         , subscriptions = subscriptions
         }
 
@@ -34,9 +35,11 @@ update msg model =
         Move motion ->
             ( updateMotion model motion, Cmd.none )
 
+
 updateMotion : List Motion -> Motion -> List Motion
 updateMotion history motion =
-    motion :: (List.take 10 history)
+    motion :: (List.take 200 history)
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -46,8 +49,33 @@ subscriptions _ =
 view : Model -> Html Msg
 view model =
     case model of
-        [] -> Html.div [ ] [ Html.text "hi" ]
-        latest :: _  -> tileView latest
+        [] ->
+            Html.div [] [ Html.text "hi" ]
+
+        latest :: _ ->
+            tileView latest
+
+
+plotMotion : Model -> Html Msg
+plotMotion recentMotionValues =
+    let
+        styles =
+            [ ( "font-family", "-apple-system, BlinkMacSystemFont, sans-serif" )
+            ]
+
+        convertIndexAndMotionToCoordinate index motion =
+            { x = toFloat index, acceleration = motion.acceleration }
+
+        coordinates =
+            List.indexedMap convertIndexAndMotionToCoordinate recentMotionValues
+    in
+        Html.div [ style styles ]
+            [ Plot.viewSeriesCustom
+                Plot.defaultSeriesPlotCustomizations
+                [ Plot.area (List.map (\{ x, acceleration } -> Plot.circle x acceleration.y)) ]
+                coordinates
+            ]
+
 
 tileView latest =
     let
@@ -61,7 +89,6 @@ tileView latest =
             , ( "min-width", "2.2em" )
             , ( "text-align", "right" )
             ]
-
     in
         center <|
             Html.div
@@ -71,14 +98,17 @@ tileView latest =
                 , rotationView "angular velocity" latest.rotationRate
                 ]
 
+
 accelerationView title acceleration =
-        Html.div [ style [ ( "margin-bottom", "1em" ) ] ]
-            [ Html.div [ style [ ( "text-align", "center" ) ] ] [ Html.text title ]
-            , Html.div []
-                [ accelerationPartView "x" acceleration.x
-                , accelerationPartView "y" acceleration.y
-                , accelerationPartView "z" acceleration.z
-                ] ]
+    Html.div [ style [ ( "margin-bottom", "1em" ) ] ]
+        [ Html.div [ style [ ( "text-align", "center" ) ] ] [ Html.text title ]
+        , Html.div []
+            [ accelerationPartView "x" acceleration.x
+            , accelerationPartView "y" acceleration.y
+            , accelerationPartView "z" acceleration.z
+            ]
+        ]
+
 
 rotationView title velocity =
     Html.div []
