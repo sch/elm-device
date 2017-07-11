@@ -4,11 +4,12 @@
 
 set -e
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../examples"
 
-elm-make example/ScreenRotationExample.elm --output build/index.html
+elm-make ScreenRotationExample.elm --output ../build/index.html
+cd ..
 VIEWPORT='<meta name="viewport" content="width=device-width, initial-scale=1"><style>'
-sed -i "s|</title><style>|</title>$VIEWPORT<style>|" build/index.html
+sed -i '' "s|</title><style>|</title>$VIEWPORT<style>|" build/index.html
 
 TEMPORARY_DIRECTORY=`mktemp -d`
 cp -r build/. $TEMPORARY_DIRECTORY

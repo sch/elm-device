@@ -4,6 +4,6 @@
 
 set -e
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../examples"
 
 elm-reactor --address=0.0.0.0 --port=8989
