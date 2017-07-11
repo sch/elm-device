@@ -6,12 +6,11 @@ effect module Device.Motion
         , changes
         )
 
-{-| This library lets you listen to the acceleration of the device, if the
-device supports
-the [experimental device motion
-apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html).
+{-| This library lets you listen to changes in acceleration of the device
+running the Elm program, if the device supports the [experimental device motion
+apis](https://w3c.github.io/deviceorientation/spec-source-orientation.html#devicemotion).
 
-@docs EulerRotation, initial, changes
+@docs Motion, initial, changes
 
 -}
 
@@ -20,7 +19,7 @@ import Dom.LowLevel as Dom
 import Json.Decode as Json
 import Process
 import Task exposing (Task)
-import Device.Orientation exposing (EulerRotation)
+import Device.Orientation exposing (EulerRotation, eulerRotation)
 
 
 -- ORIENTATION
@@ -43,20 +42,21 @@ type alias Acceleration =
 -}
 type alias Motion =
     { acceleration : Acceleration
-    , accelerationDueToGravity : Acceleration
+    , accelerationIncludingGravity : Acceleration
     , rotationRate : EulerRotation
-    , interval : Int
+    , interval : Float
     }
 
 
 {-| This is a default orientation, useful for representing initial orientation
 state.
 -}
-initial : EulerRotation
+initial : Motion
 initial =
-    { alpha = 0
-    , beta = 0
-    , gamma = 0
+    { acceleration = { x = 0, y = 0, z = 0 }
+    , accelerationIncludingGravity = { x = 0, y = 0, z = 0 }
+    , rotationRate = { alpha = 0, beta = 0, gamma = 0 }
+    , interval = 0.0
     }
 
 
@@ -69,13 +69,21 @@ changes tagger =
 
 {-| The decoder used to extract acceleration info from a motion event.
 -}
-motion : Json.Decoder motion
+motion : Json.Decoder Motion
 motion =
-    let
-        acceleration =
-            Json.field "acceleration" Json.object
-    in
-        Motion acceleration
+    Json.map4 Motion
+        (Json.field "acceleration" accelerationDecoder)
+        (Json.field "accelerationIncludingGravity" accelerationDecoder)
+        (Json.field "rotationRate" eulerRotation)
+        (Json.field "interval" Json.float)
+
+
+accelerationDecoder : Json.Decoder Acceleration
+accelerationDecoder =
+    Json.map3 Acceleration
+        (Json.field "x" Json.float)
+        (Json.field "y" Json.float)
+        (Json.field "z" Json.float)
 
 
 

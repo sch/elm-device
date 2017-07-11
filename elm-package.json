@@ -7,6 +7,7 @@
         "src"
     ],
     "exposed-modules": [
+        "Device.Motion",
         "Device.Orientation"
     ],
     "dependencies": {
