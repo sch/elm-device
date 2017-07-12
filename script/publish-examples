@@ -4,21 +4,48 @@
 
 set -e
 
-cd "$(dirname "$0")/../examples"
+cd "$(dirname "$0")/.."
 
-elm-make ScreenRotationExample.elm --output ../build/index.html
-elm-make PlotAccelerationExample.elm --output ../build/acceleration/index.html
-cd ..
-VIEWPORT='<meta name="viewport" content="width=device-width, initial-scale=1"><style>'
-sed -i '' "s|</title><style>|</title>$VIEWPORT<style>|" build/index.html
-sed -i '' "s|</title><style>|</title>$VIEWPORT<style>|" build/acceleration/index.html
+main() {
+  echo "==> Building ScreenRotation example..."
+  build_elm_example ScreenRotation orientation
 
-TEMPORARY_DIRECTORY=`mktemp -d`
-cp -r build/. $TEMPORARY_DIRECTORY
-cd $TEMPORARY_DIRECTORY
+  echo "==> Building PlotAcceleration example..."
+  build_elm_example PlotAcceleration acceleration
 
-git init
-git add .
-git commit -m "Rebuilt examples website"
-git remote add origin git@github.com:sch/elm-device.git
-git push origin HEAD:gh-pages --force
+  echo "==> Putting the build directory in the gh-pages branch..."
+  commit_build_directory_to_github_pages_branch
+}
+
+build_elm_example() {
+  EXAMPLE=$1
+  EXAMPLE_DIRECTORY=$2
+
+  # elm-make must be run in the same directory that contains elm-package.json
+  cd examples
+  elm-make ${EXAMPLE}Example.elm --output ../build/${EXAMPLE_DIRECTORY}/main.js
+  cd ..
+
+  java -jar build/compiler.jar \
+    --compilation_level SIMPLE \
+    --js build/$EXAMPLE_DIRECTORY/main.js \
+    --js_output_file build/$EXAMPLE_DIRECTORY/main.min.js
+
+  mv build/$EXAMPLE_DIRECTORY/main.min.js build/$EXAMPLE_DIRECTORY/main.js
+}
+
+commit_build_directory_to_github_pages_branch() {
+  TEMPORARY_DIRECTORY=`mktemp -d`
+  cp -r build/. $TEMPORARY_DIRECTORY
+  cd $TEMPORARY_DIRECTORY
+
+  git init
+  git add .
+  git commit -m "Rebuilt examples website"
+  git remote add origin git@github.com:sch/elm-device.git
+  git push origin HEAD:gh-pages --force
+
+  cd -
+}
+
+main

@@ -89,7 +89,7 @@ plotMotion model =
     let
         configuration =
             { defaultSeriesPlotCustomizations
-                | margin = { top = 15, bottom = 15, left = 40, right = 0 }
+                | margin = { top = 15, bottom = 15, left = 50, right = 0 }
                 , width = model.dimensions.width
                 , height = model.dimensions.height
                 , horizontalAxis = Plot.clearAxis

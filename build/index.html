@@ -1,0 +1,80 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>ScreenRotationExample</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      html, head, body {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+        "Segoe UI Symbol";
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color #555;
+      }
+
+      code {
+        font-family: "SFMono-Regular", monospace;
+      }
+
+      div {
+        max-width: 30em;
+        background-color: #FFF;
+        border: solid 1px #EEE;
+        border-radius: 3px;
+      }
+
+      h1 {
+        font-size: 100%;
+        text-align: center;
+        border-bottom: solid 1px #EEE;
+        margin: 0;
+        padding: 1.618rem;
+      }
+
+      p {
+        margin: 1.618em;
+        line-height: 1.45;
+      }
+
+      a {
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      a:visited {
+        color: initial;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>Elm Device Examples</h1>
+
+      <p>There are two examples in this package.</p>
+
+      <p>One is for representing <a href="orientation">device orientation</a>.
+        This example will rotate a tile so that it always faces the same
+        direction as you spin your phone. The tile will pan slightly when
+        tilting the device.</p>
+
+      <p>The other visualizes <a href="acceleration">device acceleration</a>.
+        Each color represents acceleration along one dimension: <code>x</code>
+        is cyan, <code>y</code> is magenta, <code>z</code> is yellow. The
+        colors blend together to indicate accelerations along multiple
+        axes.</p>
+    </div>
+  </body>
+</html>
