@@ -3,7 +3,8 @@ module PlotAccelerationExample exposing (main)
 import Html exposing (Html)
 import Html.Attributes exposing (style)
 import Svg.Attributes exposing (stroke)
-import Time
+import Task
+import Window exposing (Size)
 import Device.Motion exposing (Motion)
 import Plot exposing (defaultSeriesPlotCustomizations)
 
@@ -19,22 +20,34 @@ main =
 
 type Msg
     = Move Motion
+    | Resize Size
 
 
 type alias Model =
-    List Motion
+    { history : List Motion
+    , dimensions : Size
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( List.singleton Device.Motion.initial, Cmd.none )
+    let
+        initialState =
+            { history = List.singleton Device.Motion.initial
+            , dimensions = Size 0 0
+            }
+    in
+        ( initialState, (Task.perform Resize Window.size) )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move motion ->
-            ( updateMotion model motion, Cmd.none )
+            ( { model | history = updateMotion model.history motion }, Cmd.none )
+
+        Resize dimensions ->
+            ( { model | dimensions = dimensions }, Cmd.none )
 
 
 updateMotion : List Motion -> Motion -> List Motion
@@ -44,7 +57,10 @@ updateMotion history motion =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Device.Motion.changes Move
+    Sub.batch
+        [ Device.Motion.changes Move
+        , Window.resizes Resize
+        ]
 
 
 css =
@@ -63,11 +79,13 @@ view model =
 
 
 plotMotion : Model -> Html Msg
-plotMotion recentMotionValues =
+plotMotion model =
     let
         configuration =
             { defaultSeriesPlotCustomizations
                 | margin = { top = 50, bottom = 50, left = 80, right = 40 }
+                , width = model.dimensions.width
+                , height = model.dimensions.height
                 , horizontalAxis = Plot.clearAxis
                 , toDomainLowest = \y -> y - 0.1
                 , toDomainHighest = \y -> y + 0.1
@@ -77,7 +95,7 @@ plotMotion recentMotionValues =
             { x = toFloat index, acceleration = motion.acceleration }
 
         coordinates =
-            List.indexedMap convertIndexAndMotionToCoordinate recentMotionValues
+            List.indexedMap convertIndexAndMotionToCoordinate model.history
 
         seriesAlong getter color =
             { axis = Plot.normalAxis
