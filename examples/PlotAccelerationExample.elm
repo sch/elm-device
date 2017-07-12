@@ -2,9 +2,10 @@ module PlotAccelerationExample exposing (main)
 
 import Html exposing (Html)
 import Html.Attributes exposing (style)
+import Svg.Attributes exposing (stroke)
 import Time
 import Device.Motion exposing (Motion)
-import Plot
+import Plot exposing (defaultSeriesPlotCustomizations)
 
 
 main =
@@ -38,7 +39,7 @@ update msg model =
 
 updateMotion : List Motion -> Motion -> List Motion
 updateMotion history motion =
-    motion :: (List.take 200 history)
+    motion :: (List.take 75 history)
 
 
 subscriptions : Model -> Sub Msg
@@ -59,21 +60,44 @@ view model =
 plotMotion : Model -> Html Msg
 plotMotion recentMotionValues =
     let
+        margin =
+            { top = 50, bottom = 50, left = 80, right = 40 }
+
+        configuration =
+            { defaultSeriesPlotCustomizations
+                | margin = margin
+            }
+
         styles =
             [ ( "font-family", "-apple-system, BlinkMacSystemFont, sans-serif" )
             ]
+
+        css =
+            """
+        path { mix-blend-mode: multiply; }
+        """
 
         convertIndexAndMotionToCoordinate index motion =
             { x = toFloat index, acceleration = motion.acceleration }
 
         coordinates =
             List.indexedMap convertIndexAndMotionToCoordinate recentMotionValues
+
+        seriesVector color getter =
+            { axis = Plot.normalAxis
+            , interpolation = Plot.Linear (Just color) [ stroke "" ]
+            , toDataPoints = List.map (\{ x, acceleration } -> Plot.clear x (getter acceleration))
+            }
+
+        series =
+            [ seriesVector "cyan" .x
+            , seriesVector "magenta" .y
+            , seriesVector "yellow" .z
+            ]
     in
         Html.div [ style styles ]
-            [ Plot.viewSeriesCustom
-                Plot.defaultSeriesPlotCustomizations
-                [ Plot.area (List.map (\{ x, acceleration } -> Plot.circle x acceleration.y)) ]
-                coordinates
+            [ Plot.viewSeriesCustom configuration series coordinates
+            , Html.node "style" [] [ Html.text css ]
             ]
 
 
