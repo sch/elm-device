@@ -52,7 +52,7 @@ update msg model =
 
 updateMotion : List Motion -> Motion -> List Motion
 updateMotion history motion =
-    motion :: (List.take 75 history)
+    motion :: (List.take 100 history)
 
 
 subscriptions : Model -> Sub Msg
@@ -65,8 +65,14 @@ subscriptions _ =
 
 css =
     """
-body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-path { mix-blend-mode: multiply; }
+body {
+    margin-right: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+path {
+    mix-blend-mode: multiply;
+}
 """
 
 
@@ -83,7 +89,7 @@ plotMotion model =
     let
         configuration =
             { defaultSeriesPlotCustomizations
-                | margin = { top = 50, bottom = 50, left = 80, right = 40 }
+                | margin = { top = 15, bottom = 15, left = 40, right = 0 }
                 , width = model.dimensions.width
                 , height = model.dimensions.height
                 , horizontalAxis = Plot.clearAxis
