@@ -7,6 +7,7 @@ import Task
 import Window exposing (Size)
 import Device.Motion exposing (Motion)
 import Plot exposing (defaultSeriesPlotCustomizations)
+import SlidingBuffer exposing (SlidingBuffer)
 
 
 main =
@@ -24,7 +25,7 @@ type Msg
 
 
 type alias Model =
-    { history : List Motion
+    { history : SlidingBuffer Motion
     , dimensions : Size
     }
 
@@ -33,7 +34,7 @@ init : ( Model, Cmd Msg )
 init =
     let
         initialState =
-            { history = List.singleton Device.Motion.initial
+            { history = SlidingBuffer.init 100 Device.Motion.initial
             , dimensions = Size 0 0
             }
     in
@@ -44,15 +45,10 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move motion ->
-            ( { model | history = updateMotion model.history motion }, Cmd.none )
+            ( { model | history = SlidingBuffer.append model.history motion }, Cmd.none )
 
         Resize dimensions ->
             ( { model | dimensions = dimensions }, Cmd.none )
-
-
-updateMotion : List Motion -> Motion -> List Motion
-updateMotion history motion =
-    motion :: (List.take 100 history)
 
 
 subscriptions : Model -> Sub Msg
@@ -101,7 +97,9 @@ plotMotion model =
             { x = toFloat index, acceleration = motion.acceleration }
 
         coordinates =
-            List.indexedMap convertIndexAndMotionToCoordinate model.history
+            List.indexedMap
+                convertIndexAndMotionToCoordinate
+                (SlidingBuffer.toList model.history)
 
         seriesAlong getter color =
             { axis = Plot.normalAxis
