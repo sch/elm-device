@@ -2,6 +2,7 @@ effect module Device.Motion
     where { subscription = MySub }
     exposing
         ( Motion
+        , Acceleration
         , initial
         , changes
         )
@@ -29,7 +30,7 @@ type alias MetersPerSecondSquared =
     Float
 
 
-{-| This is a type representing the acceleration of a device.
+{-| This is a type representing the acceleration of a device in m/s^2.
 -}
 type alias Acceleration =
     { x : MetersPerSecondSquared

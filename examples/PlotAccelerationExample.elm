@@ -5,7 +5,7 @@ import Html.Attributes exposing (style)
 import Svg.Attributes exposing (stroke)
 import Task
 import Window exposing (Size)
-import Device.Motion exposing (Motion)
+import Device.Motion exposing (Motion, Acceleration)
 import Plot exposing (defaultSeriesPlotCustomizations)
 import SlidingBuffer exposing (SlidingBuffer)
 
@@ -93,27 +93,26 @@ plotMotion model =
                 , toDomainHighest = \y -> y + 0.1
             }
 
-        convertIndexAndMotionToCoordinate index motion =
-            { x = toFloat index, acceleration = motion.acceleration }
-
-        coordinates =
-            List.indexedMap
-                convertIndexAndMotionToCoordinate
-                (SlidingBuffer.toList model.history)
-
         seriesAlong getter color =
-            { axis = Plot.normalAxis
-            , interpolation = Plot.Linear (Just color) [ stroke "" ]
-            , toDataPoints = List.map (\{ x, acceleration } -> Plot.clear x (getter acceleration))
-            }
+            let
+                toCoordinates =
+                    SlidingBuffer.toList >> (List.indexedMap convertIndexAndMotionToCoordinate)
+
+                convertIndexAndMotionToCoordinate index motion =
+                    Plot.clear (toFloat index) (getter motion)
+            in
+                { axis = Plot.normalAxis
+                , interpolation = Plot.Linear (Just color) [ stroke "" ]
+                , toDataPoints = toCoordinates
+                }
 
         series =
-            [ seriesAlong .x "cyan"
-            , seriesAlong .y "magenta"
-            , seriesAlong .z "yellow"
+            [ seriesAlong (.acceleration >> .x) "cyan"
+            , seriesAlong (.acceleration >> .y) "magenta"
+            , seriesAlong (.acceleration >> .z) "yellow"
             ]
     in
-        Plot.viewSeriesCustom configuration series coordinates
+        Plot.viewSeriesCustom configuration series model.history
 
 
 center : Html Msg -> Html Msg
