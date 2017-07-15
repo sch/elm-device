@@ -2,10 +2,13 @@ module PlotAccelerationExample exposing (main)
 
 import Html exposing (Html)
 import Html.Attributes exposing (style)
+import Html.Lazy exposing (lazy2)
 import Svg.Attributes exposing (stroke)
 import Task
+import Time exposing (Time)
+import AnimationFrame
 import Window exposing (Size)
-import Device.Motion exposing (Motion, Acceleration)
+import Device.Motion exposing (Motion, Acceleration, initial)
 import Plot exposing (defaultSeriesPlotCustomizations)
 import SlidingBuffer exposing (SlidingBuffer)
 
@@ -22,11 +25,13 @@ main =
 type Msg
     = Move Motion
     | Resize Size
+    | Tick Time
 
 
 type alias Model =
     { history : SlidingBuffer Motion
     , dimensions : Size
+    , collector : List Motion
     }
 
 
@@ -36,6 +41,7 @@ init =
         initialState =
             { history = SlidingBuffer.init 100 Device.Motion.initial
             , dimensions = Size 0 0
+            , collector = []
             }
     in
         ( initialState, (Task.perform Resize Window.size) )
@@ -45,10 +51,47 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Move motion ->
-            ( { model | history = SlidingBuffer.append model.history motion }, Cmd.none )
+            ( { model | collector = motion :: model.collector }, Cmd.none )
+
+        Tick _ ->
+            ( updateHistory model, Cmd.none )
 
         Resize dimensions ->
             ( { model | dimensions = dimensions }, Cmd.none )
+
+
+updateHistory : Model -> Model
+updateHistory model =
+    let
+        newMotion =
+            averageAcceleration model.collector
+                |> Maybe.withDefault
+                    (SlidingBuffer.lastEntered model.history
+                        |> Maybe.withDefault Device.Motion.initial
+                    )
+
+        history =
+            SlidingBuffer.push newMotion model.history
+    in
+        { model | collector = [], history = history }
+
+
+averageAcceleration : List Motion -> Maybe Motion
+averageAcceleration motions =
+    if (List.isEmpty motions) then
+        Nothing
+    else
+        let
+            count =
+                List.length motions |> toFloat
+
+            acceleration =
+                { x = (motions |> List.map (.acceleration >> .x) |> List.sum) / count
+                , y = (motions |> List.map (.acceleration >> .y) |> List.sum) / count
+                , z = (motions |> List.map (.acceleration >> .z) |> List.sum) / count
+                }
+        in
+            Just { initial | acceleration = acceleration }
 
 
 subscriptions : Model -> Sub Msg
@@ -56,6 +99,7 @@ subscriptions _ =
     Sub.batch
         [ Device.Motion.changes Move
         , Window.resizes Resize
+        , AnimationFrame.times Tick
         ]
 
 
@@ -75,22 +119,22 @@ path {
 view : Model -> Html Msg
 view model =
     Html.div []
-        [ plotMotion model
+        [ lazy2 plotMotion model.history model.dimensions
         , Html.node "style" [] [ Html.text css ]
         ]
 
 
-plotMotion : Model -> Html Msg
-plotMotion model =
+plotMotion : SlidingBuffer Motion -> Size -> Html Msg
+plotMotion history dimensions =
     let
         configuration =
             { defaultSeriesPlotCustomizations
                 | margin = { top = 15, bottom = 15, left = 50, right = 0 }
-                , width = model.dimensions.width
-                , height = model.dimensions.height
+                , width = dimensions.width
+                , height = dimensions.height
                 , horizontalAxis = Plot.clearAxis
-                , toDomainLowest = \y -> y - 0.1
-                , toDomainHighest = \y -> y + 0.1
+                , toDomainLowest = \y -> y - 10
+                , toDomainHighest = \y -> y + 10
             }
 
         seriesAlong getter color =
@@ -112,7 +156,7 @@ plotMotion model =
             , seriesAlong (.acceleration >> .z) "yellow"
             ]
     in
-        Plot.viewSeriesCustom configuration series model.history
+        Plot.viewSeriesCustom configuration series history
 
 
 center : Html Msg -> Html Msg

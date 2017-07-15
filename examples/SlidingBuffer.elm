@@ -5,8 +5,10 @@ type alias Size =
     Int
 
 
-type SlidingBuffer a
-    = SlidingBuffer Size (List a)
+type alias SlidingBuffer a =
+    { size : Size
+    , items : List a
+    }
 
 
 init : Int -> a -> SlidingBuffer a
@@ -16,13 +18,14 @@ init size item =
 
 toList : SlidingBuffer a -> List a
 toList buffer =
-    case buffer of
-        SlidingBuffer _ items ->
-            items
+    buffer.items
 
 
-append : SlidingBuffer a -> a -> SlidingBuffer a
-append buffer item =
-    case buffer of
-        SlidingBuffer size items ->
-            SlidingBuffer size (item :: (List.take 100 items))
+push : a -> SlidingBuffer a -> SlidingBuffer a
+push item buffer =
+    SlidingBuffer buffer.size (item :: (List.take (buffer.size - 1) buffer.items))
+
+
+lastEntered : SlidingBuffer a -> Maybe a
+lastEntered buffer =
+    List.head buffer.items
